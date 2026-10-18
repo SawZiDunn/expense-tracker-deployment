@@ -1,0 +1,14 @@
+# Local environment / secrets (Docker Compose reads `.env` for variable substitution)
+.env
+.env.local
+.env.*.local
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# layers - whatever frontend and backend repositories are called, ignore them
+/expense-tracker-frontend
+/expense-tracker-backend
