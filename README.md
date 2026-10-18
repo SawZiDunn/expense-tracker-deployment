@@ -1,15 +1,15 @@
-# Expense Tracker
+# Expense Tracker - Deployment
 
 Full-stack expense tracker: a **React + TypeScript** frontend and an **ASP.NET Core 8 + MongoDB**
 backend, wired together with Docker Compose so both run with one command.
 
-The application code lives in two separate repositories, cloned into this folder:
+The application code lives in two separate repositories, cloned into this one:
 
 - [expense-tracker-backend](https://github.com/SawZiDunn/expense-tracker-backend) - ASP.NET Core 8 Minimal API + MongoDB Atlas
 - [expense-tracker-frontend](https://github.com/SawZiDunn/expense-tracker-frontend) - React 18 + TypeScript + Vite + Tailwind CSS
 
-**This repository only holds the Docker Compose setup and documentation - it contains no
-application code.**
+**This repository (`expense-tracker-deployment`) only holds the Docker Compose setup and
+documentation - it contains no application code.**
 
 ## What's here
 
@@ -29,9 +29,14 @@ application code.**
 
 # Run it with Docker
 
-## 1. Clone the two projects into this folder
+## 1. Clone the repositories
+
+Clone this repository, then the two projects inside it:
 
 ```bash
+git clone https://github.com/SawZiDunn/expense-tracker-deployment
+cd expense-tracker-deployment
+
 git clone https://github.com/SawZiDunn/expense-tracker-backend
 git clone https://github.com/SawZiDunn/expense-tracker-frontend
 ```
@@ -39,9 +44,11 @@ git clone https://github.com/SawZiDunn/expense-tracker-frontend
 You should end up with:
 
 ```
-expense-tracker/
+expense-tracker-deployment/
 ├── docker-compose.yml
 ├── .env
+├── .env.example
+├── README.md
 ├── expense-tracker-backend/
 └── expense-tracker-frontend/
 ```
