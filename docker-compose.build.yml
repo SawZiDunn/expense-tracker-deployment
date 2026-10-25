@@ -1,0 +1,26 @@
+# Build override - only needed when you have the two source repositories cloned.
+#
+# docker-compose.yml alone pulls the published images and needs no source code.
+# Layer this file on top to build the images from ./expense-tracker-backend and
+# ./expense-tracker-frontend instead:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
+#
+# Publishing is NOT done with this file: the public images are multi-architecture
+# (linux/amd64 + linux/arm64) and must be built with buildx, otherwise the manifest
+# becomes amd64-only and Apple Silicon Macs lose native support. See "Publishing updated
+# images (maintainers)" in README.md for the exact commands.
+#
+# Keep this file separate: Compose would otherwise try to build during a plain
+# `docker compose up`, which fails on a checkout that has no application source.
+services:
+    backend:
+        build:
+            context: ./expense-tracker-backend
+
+    frontend:
+        build:
+            context: ./expense-tracker-frontend
+            args:
+                # Baked into the bundle at build time. Must be reachable from the browser.
+                VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}

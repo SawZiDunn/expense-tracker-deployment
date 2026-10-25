@@ -1,150 +1,119 @@
 # Expense Tracker - Deployment
 
-Full-stack expense tracker: a **React + TypeScript** frontend and an **ASP.NET Core 8 + MongoDB**
-backend, wired together with Docker Compose so both run with one command.
+Runs the full expense tracker - React frontend, ASP.NET Core backend and MongoDB - with a
+single command.
 
-The application code lives in two separate repositories, cloned into this one:
+This repository contains **no application code**. It holds the Compose file and
+documentation; the services run from images published on Docker Hub.
 
-- [expense-tracker-backend](https://github.com/SawZiDunn/expense-tracker-backend) - ASP.NET Core 8 Minimal API + MongoDB Atlas
-- [expense-tracker-frontend](https://github.com/SawZiDunn/expense-tracker-frontend) - React 18 + TypeScript + Vite + Tailwind CSS
+## Quick start
 
-**This repository (`expense-tracker-deployment`) only holds the Docker Compose setup and
-documentation - it contains no application code.**
-
-## What's here
-
-| File                 | Purpose                                          |
-| -------------------- | ------------------------------------------------ |
-| `docker-compose.yml` | Builds and runs both services                    |
-| `.env.example`       | Template for the environment variables           |
-| `.gitignore`         | Keeps `.env` and the two cloned repos out of git |
-
-## Prerequisites
-
-- Docker Engine with Compose v2 - check with `docker compose version`
-- A MongoDB Atlas cluster and database user
-- Git
-
----
-
-# Run it with Docker
-
-## 1. Clone the repositories
-
-Clone this repository, then the two projects inside it:
+Requires Docker with Compose v2 - check with `docker compose version`. Works on Linux,
+Windows and macOS, both Intel and Apple Silicon.
 
 ```bash
 git clone https://github.com/SawZiDunn/expense-tracker-deployment
 cd expense-tracker-deployment
+docker compose up -d
+```
 
+Open **http://localhost:3000**.
+
+Nothing else is needed: no `.env` file, no MongoDB account, no local source code. Compose
+pulls these images on the first run:
+
+| Service  | Image                                       |
+| -------- | ------------------------------------------- |
+| frontend | `sawzidunn/expense-tracker-frontend:latest` |
+| backend  | `sawzidunn/expense-tracker-backend:latest`  |
+| mongo    | `mongo:7`                                   |
+
+## Application code
+
+| Repository                                                                        | Stack                                   |
+| --------------------------------------------------------------------------------- | --------------------------------------- |
+| [expense-tracker-backend](https://github.com/SawZiDunn/expense-tracker-backend)   | ASP.NET Core 8 Minimal API              |
+| [expense-tracker-frontend](https://github.com/SawZiDunn/expense-tracker-frontend) | React 18 + TypeScript + Vite + Tailwind |
+
+You only need these to **build the images yourself**. The quick start uses the published
+ones.
+
+## Build from source (optional)
+
+```bash
 git clone https://github.com/SawZiDunn/expense-tracker-backend
 git clone https://github.com/SawZiDunn/expense-tracker-frontend
+
+docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
 ```
 
-You should end up with:
+`docker-compose.yml` on its own only pulls. The second file adds the `build:` sections, and
+keeping them separate is what lets a plain `docker compose up` work on a checkout that has
+no source code.
 
-```
-expense-tracker-deployment/
-├── docker-compose.yml
-├── .env
-├── .env.example
-├── README.md
-├── expense-tracker-backend/
-└── expense-tracker-frontend/
-```
-
-## 2. Create the environment file
-
-```bash
-cp .env.example .env
-```
-
-Then edit `.env` and fill in your connection string:
-
-```
-MONGODB_CONNECTION_STRING=mongodb+srv://user:password@cluster.mongodb.net/?retryWrites=true&w=majority
-VITE_API_URL=http://localhost:8080
-```
-
-> In MongoDB Atlas, make sure **Network Access** allows `0.0.0.0/0` (or your own IP).
-> If your password contains `$` or `#`, wrap the whole value in single quotes.
-
-## 3. Start both services
-
-```bash
-docker compose up --build
-```
-
-The first build takes a few minutes (NuGet restore + `npm ci`). Later runs are cached.
-
-## 4. Open the app
+## Ports
 
 | Service     | URL                   |
 | ----------- | --------------------- |
 | Frontend    | http://localhost:3000 |
 | Backend API | http://localhost:8080 |
 
-Stop everything with `Ctrl+C`, or `docker compose down` if running detached.
+If either port is taken, change the left-hand number in `docker-compose.yml`. The backend
+also only accepts browser calls from `http://localhost:3000`; if you move the frontend to a
+different port, update `FRONTEND_URL` in the same file.
 
-## What Compose builds
+## Database: local MongoDB or Atlas
 
-|                | frontend                                       | backend                                                    |
-| -------------- | ---------------------------------------------- | ---------------------------------------------------------- |
-| Built from     | `./expense-tracker-frontend`                   | `./expense-tracker-backend`                                |
-| Container      | Node build → nginx serving static files        | .NET 8 runtime running the API                             |
-| Ports          | `80` inside, published as **3000**             | `8080` inside and out                                      |
-| Key settings   | `VITE_API_URL` → `http://localhost:8080`       | `MONGODB_CONNECTION_STRING`, `FRONTEND_URL` → `http://localhost:3000` |
+The project works with either one. The local container is the default and needs no setup.
 
-`VITE_API_URL` is baked into the frontend bundle at build time, and `FRONTEND_URL` is what
-the backend allows through CORS. Both must be addresses the **browser** can reach - never
-Docker-internal hostnames like `backend:8080`.
+| Mode                          | Setup                            | Data lives in                           |
+| ----------------------------- | -------------------------------- | --------------------------------------- |
+| **Local container** (default) | nothing - `docker compose up -d` | the `mongo-data` volume on this machine |
+| **MongoDB Atlas** (cloud)     | set `MONGODB_CONNECTION_STRING`  | your Atlas cluster                      |
 
-## Common commands
+Both use the same database and collection, `ExpenseTrackerDB.expenses`, because those names
+come from the backend's `appsettings.json` - not from the connection string.
 
-```bash
-docker compose up --build -d      # start in the background
-docker compose logs -f            # follow both services' logs
-docker compose logs -f backend    # follow one service
-docker compose ps                 # what's running
-docker compose down               # stop and remove containers
-docker compose build --no-cache   # rebuild from scratch
+To use Atlas, create a `.env` file next to `docker-compose.yml`:
+
+```
+MONGODB_CONNECTION_STRING=mongodb+srv://user:password@cluster.mongodb.net/
 ```
 
-## Troubleshooting
+then run `docker compose up -d`. Compose passes the value to the backend, which takes
+precedence over the local container. Comment the line out (or delete `.env`) to go back to
+the local database. Your Atlas cluster's network access list must allow your IP address.
 
-| Symptom                                                        | Cause / fix                                                          |
-| -------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `The "MONGODB_CONNECTION_STRING" variable is not set`          | No `.env` file - do step 2                                            |
-| Backend returns 500 with `bad auth : authentication failed`    | Wrong MongoDB username/password. Fix `.env`, then `docker compose up` |
-| Browser reports a CORS error                                   | `FRONTEND_URL` must match the address bar origin exactly, no trailing slash |
-| `port is already allocated`                                    | Something already uses 3000 or 8080 - change the left side of the mapping |
-| Frontend loads but shows no data                               | `VITE_API_URL` is wrong; it's baked in, so rebuild the frontend image |
-
-Two things that catch people out:
-
-- **`.env` is read by Compose**, not by the containers directly. After editing it, run
-  `docker compose up -d` so containers are recreated with the new values.
-- **`.env` is gitignored.** Never commit a real connection string.
-
----
-
-# Running without Docker (optional)
+## Updating and data
 
 ```bash
-# backend - http://localhost:5000
-cd expense-tracker-backend
-dotnet run
-
-# frontend - http://localhost:5173 (in a separate terminal)
-cd expense-tracker-frontend
-npm install
-npm run dev
+docker compose pull      # fetch newer images
+docker compose up -d
+docker compose down      # stop, keep the data
+docker compose down -v   # stop and delete the database volume
 ```
 
-In this mode the backend reads its own `expense-tracker-backend/.env`
-(`MONGODB_CONNECTION_STRING`, `FRONTEND_URL=http://localhost:5173`).
+MongoDB data lives in the `mongo-data` volume when you use the local container. It survives
+`restart`, `down` and `up -d`; only `down -v` deletes it. The images are tagged `latest`, so
+an existing copy is not refreshed by `up` alone - run `docker compose pull` to update.
 
-> On this machine `dotnet` is not on `PATH` - it lives at
-> `/snap/dotnet-sdk-80/current/usr/bin/dotnet`.
+## Publishing updated images (maintainers)
 
-Each project repository also has its own `README.md`, `DEPLOYMENT.md` and `DOCKER_SETUP.md`.
+The images are multi-architecture (`linux/amd64` + `linux/arm64`) and must be pushed with
+`buildx`:
+
+```bash
+docker login
+
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -t sawzidunn/expense-tracker-backend:latest --push ./expense-tracker-backend
+
+docker buildx build --platform linux/amd64,linux/arm64 \
+  --build-arg VITE_API_URL=http://localhost:8080 \
+  -t sawzidunn/expense-tracker-frontend:latest --push ./expense-tracker-frontend
+```
+
+Use `buildx`, not `docker compose build && docker compose push` - the latter replaces the
+manifest with an amd64-only image and breaks Apple Silicon Macs. `VITE_API_URL` is baked
+into the frontend at build time, so the published image is for `localhost` use; a real
+deployment domain needs its own frontend build.

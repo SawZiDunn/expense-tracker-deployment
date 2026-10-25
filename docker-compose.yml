@@ -1,36 +1,63 @@
-# Runs the expense tracker frontend and backend together.
+# Local / Docker (no Atlas account needed):
+#   docker compose up -d                            # pull published images and run
+#   docker compose pull && docker compose up -d     # force-refresh the images first
 #
-# Usage (from the repository root):
-#   cp .env.example .env    # then fill in MONGODB_CONNECTION_STRING
-#   docker compose up --build
+# This file intentionally has no `build:` sections, so `docker compose up` never needs
+# application source code. To build the images from the two source repositories (cloned
+# next to this file), layer the build file on top:
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
 #
-# Compose reads `.env` automatically for the variables referenced below.
+# MongoDB data lives in the named volume `mongo-data`, so it survives container
+# restarts and `docker compose down`. Only `docker compose down -v` deletes it.
+#
+# To point the backend at a cloud database (e.g. Atlas) instead of the local
+# container, set MONGODB_CONNECTION_STRING in `.env` - it takes precedence.
 services:
+    mongo:
+        image: mongo:7
+        container_name: expense-tracker-mongo
+        restart: unless-stopped
+        volumes:
+            # /data/db holds the database and is the only volume that persists.
+            # /data/configdb is declared by the mongo image but is never written to by a
+            # standalone mongod; tmpfs keeps it off disk and stops Docker from creating a
+            # throwaway anonymous volume on every container start.
+            - mongo-data:/data/db
+            - type: tmpfs
+              target: /data/configdb
+        healthcheck:
+            test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 20s
+
     backend:
-        build:
-            context: ./expense-tracker-backend
-        image: expense-tracker-backend
+        image: sawzidunn/expense-tracker-backend:latest
         container_name: expense-tracker-backend
         ports:
-            - "8080:8080" # Expose the backend API from the container to the host machine on port 8080
+            - "8080:8080"
         environment:
             PORT: 8080
-            ASPNETCORE_ENVIRONMENT: Production
-            MONGODB_CONNECTION_STRING: ${MONGODB_CONNECTION_STRING}
-            # Origin the browser uses to reach the frontend (for CORS)
-            FRONTEND_URL: ${FRONTEND_URL}
+            # Production by default; set ASPNETCORE_ENVIRONMENT in `.env` to override.
+            ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+            # Unset -> talk to the local mongo container, no account needed.
+            # Set in `.env` -> use that connection string (e.g. MongoDB Atlas).
+            MONGODB_CONNECTION_STRING: ${MONGODB_CONNECTION_STRING:-mongodb://mongo:27017}
+            FRONTEND_URL: http://localhost:3000
+        depends_on:
+            mongo:
+                condition: service_healthy
         restart: unless-stopped
-    
+
     frontend:
-        build:
-            context: ./expense-tracker-frontend
-            args:
-                # Must be reachable from the browser, not just the container network
-                VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
-        image: expense-tracker-frontend
+        image: sawzidunn/expense-tracker-frontend:latest
         container_name: expense-tracker-frontend
         ports:
-            - "3000:80" # Expose the frontend from the container to the host machine on port 3000
+            - "3000:80"
         depends_on:
             - backend
         restart: unless-stopped
+
+volumes:
+    mongo-data:
