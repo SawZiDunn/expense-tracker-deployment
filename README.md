@@ -28,6 +28,10 @@ pulls these images on the first run:
 | backend  | `sawzidunn/expense-tracker-backend:latest`  |
 | mongo    | `mongo:7`                                   |
 
+To compile the images from the two source repositories instead, see
+[Build from source](#build-from-source-optional). A bare `up --build` does not build
+anything - the base file has no `build:` sections.
+
 ## Application code
 
 | Repository                                                                        | Stack                                   |
