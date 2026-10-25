@@ -55,6 +55,11 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
 keeping them separate is what lets a plain `docker compose up` work on a checkout that has
 no source code.
 
+The built images are tagged `expense-tracker-backend:local` and
+`expense-tracker-frontend:local`, separate from the published `sawzidunn/...:latest` tags.
+That way `docker compose ps` shows which stack is running, and pulling the published images
+never overwrites a local build.
+
 ## Ports
 
 | Service     | URL                   |

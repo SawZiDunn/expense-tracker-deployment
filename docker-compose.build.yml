@@ -15,10 +15,14 @@
 # `docker compose up`, which fails on a checkout that has no application source.
 services:
     backend:
+        # Distinct tag from the published image, so `docker compose ps` shows whether
+        # the running stack came from source or from Docker Hub.
+        image: expense-tracker-backend:local
         build:
             context: ./expense-tracker-backend
 
     frontend:
+        image: expense-tracker-frontend:local
         build:
             context: ./expense-tracker-frontend
             args:
