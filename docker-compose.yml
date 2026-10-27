@@ -1,7 +1,3 @@
-# Local / Docker (no Atlas account needed):
-#   docker compose up -d                            # pull published images and run
-#   docker compose pull && docker compose up -d     # force-refresh the images first
-#
 # This file intentionally has no `build:` sections, so `docker compose up` never needs
 # application source code. To build the images from the two source repositories (cloned
 # next to this file), layer the build file on top:
@@ -39,7 +35,6 @@ services:
             - "8080:8080"
         environment:
             PORT: 8080
-            # Production by default; set ASPNETCORE_ENVIRONMENT in `.env` to override.
             ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
             # Unset -> talk to the local mongo container, no account needed.
             # Set in `.env` -> use that connection string (e.g. MongoDB Atlas).
